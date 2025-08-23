@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:number_aacharya/screens/pdf_viewer_screen.dart';
+import 'package:number_aacharya/services/api_service.dart';
 import 'list_screen.dart';
 import 'credits_screen.dart';
 import 'profile_screen.dart';
@@ -14,11 +16,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // List of screens for each tab
   final List<Widget> _screens = [
-    const HomeDashboard(), // Home content
+    const HomeDashboard(),
     const ListScreen(),
-    const SearchScreen(), // Changed to SearchScreen for Joyent.png
+    const SearchScreen(),
     const CreditsScreen(),
     const ProfileScreen(),
   ];
@@ -27,38 +28,26 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 1) {
+    if (index != 0) {
+      final screen = _screens[index];
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ListScreen()),
-      );
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const SearchScreen()),
-      );
-    } else if (index == 3) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const CreditsScreen()),
-      );
-    } else if (index == 4) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-      );
+        MaterialPageRoute(builder: (context) => screen),
+      ).then((_) {
+        if (mounted) setState(() => _selectedIndex = 0);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex], // Display selected screen
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.green,
+        selectedItemColor: const Color(0xFF4BAF8D),
+        unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         onTap: _onItemTapped,
         items: [
@@ -80,15 +69,91 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Your original dashboard UI moved here
-class HomeDashboard extends StatelessWidget {
+// HomeDashboard UI with API data and updated greeting
+class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    double screenWidth = MediaQuery.of(context).size.width;
+  _HomeDashboardState createState() => _HomeDashboardState();
+}
 
+class _HomeDashboardState extends State<HomeDashboard> {
+  List<Map<String, dynamic>> _inquiries = [];
+  bool _isLoading = false;
+  String? _firstName;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserDetails();
+    _fetchInquiries();
+  }
+
+  Future<void> _fetchUserDetails() async {
+    try {
+      final storedId = await ApiService.getStoredSystemUserId();
+      if (storedId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not logged in')),
+          );
+        }
+        return;
+      }
+
+      // You can also fetch full profile if API available,
+      // for now just set a placeholder
+      if (mounted) {
+        setState(() {
+          _firstName = "Rushi"; // TODO: Replace with real API if needed
+        });
+      }
+    } catch (e) {
+      print("User details error: $e");
+    }
+  }
+
+  Future<void> _fetchInquiries() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await ApiService.getInquiries();
+      print('Home inquiries response: $response');
+
+      if (response.containsKey('data') && response['data'] is List) {
+        setState(() {
+          _inquiries = List<Map<String, dynamic>>.from(response['data']);
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No inquiries found')),
+          );
+        }
+      }
+    } catch (e) {
+      print("Inquiries error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to fetch inquiries')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+ void _viewPdf(String url) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => PdfViewerScreen(url: url),
+    ),
+  );
+}
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -96,7 +161,7 @@ class HomeDashboard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile Header
+              // Profile header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -109,35 +174,30 @@ class HomeDashboard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Hi, Rushi👋",
-                            style: TextStyle(
-                              color: Colors.green,
+                            'Hi, ${_firstName ?? 'Guest'} 👋',
+                            style: const TextStyle(
+                              color: Color(0xFF4BAF8D),
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
                             ),
                           ),
-                          Text(
-                            "Welcome Back",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
-                            ),
-                          ),
+                          const Text("Welcome Back",
+                              style: TextStyle(fontSize: 14, color: Colors.black)),
                         ],
                       ),
                     ],
                   ),
                   IconButton(
                     icon: const Icon(Icons.notifications_none),
+                    color: const Color(0xFF4BAF8D),
                     onPressed: () {},
-                  )
+                  ),
                 ],
               ),
 
               const SizedBox(height: 20),
-
               // Search Bar
               Container(
                 height: 45,
@@ -209,7 +269,8 @@ class HomeDashboard extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Dashboard Title
+
+              // Dashboard title
               const Text(
                 "Dashboard",
                 style: TextStyle(
@@ -220,79 +281,84 @@ class HomeDashboard extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // Dashboard List
-              Column(
-                children: List.generate(4, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          // Date Box
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEAF7E3),
-                              borderRadius: BorderRadius.circular(12),
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator(color: Color(0xFF4BAF8D)))
+              else if (_inquiries.isEmpty)
+                const Center(child: Text('No inquiries available'))
+              else
+                Column(
+                  children: _inquiries.map((inquiry) {
+                    final dateParts = (inquiry['date_of_birth'] ?? '02/05/1998').split('/');
+                    final day = dateParts[0];
+                    final month = dateParts[1];
+                    final year = dateParts[2];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Column(
-                              children: const [
-                                Text(
-                                  "17",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18),
-                                ),
-                                Text(
-                                  "March",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                Text(
-                                  "1999",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            // Date box
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF7E3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(day,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold, fontSize: 18)),
+                                  Text(month, style: const TextStyle(fontSize: 12)),
+                                  Text(year, style: const TextStyle(fontSize: 12)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
+                            const SizedBox(width: 12),
 
-                          // Name and Label
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Rushikesh Shinde",
-                                  style: TextStyle(
+                            // Name & Phone
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${inquiry['first_name'] ?? ''} ${inquiry['last_name'] ?? ''}',
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  "Phone Number Suggest",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    inquiry['phone_number'] ?? 'N/A',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
 
-                          // Download Icon
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.download,
-                                color: Colors.green),
-                          ),
-                        ],
+                            // Download
+                            IconButton(
+                              onPressed: () => _viewPdf(inquiry['report_file'] ?? ''),
+                              icon: const Icon(Icons.download, color: Color(0xFF4BAF8D)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }),
-              ),
+                    );
+                  }).toList(),
+                ),
             ],
           ),
         ),

@@ -1,9 +1,34 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
-import 'login_screen.dart';
+import 'login_form_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Map<String, dynamic>? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userStr = prefs.getString('user');
+    if (userStr != null) {
+      setState(() {
+        _user = jsonDecode(userStr);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,90 +52,90 @@ class ProfileScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
+      body: _user == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
 
-            // Profile Avatar
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: const Color(0xFFD9F2D9),
-              child: const Icon(
-                Icons.person,
-                size: 60,
-                color: Colors.grey,
+                  // Profile Avatar
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: const Color(0xFFD9F2D9),
+                    child: const Icon(
+                      Icons.person,
+                      size: 60,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // Name
+                  Text(
+                    _user?['full_name'] ?? "No Name",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _user?['email_id'] ?? "No Email",
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Profile Info Cards
+                  _buildProfileTile(Icons.phone, "Phone", "+91 ${_user?['mobile_no'] ?? ''}"),
+                  const SizedBox(height: 10),
+                  _buildProfileTile(Icons.flag, "Country", "India"), // backend doesn’t give country
+                  const SizedBox(height: 10),
+                  _buildProfileTile(Icons.credit_card, "User Type", _user?['user_type'] ?? "N/A"),
+
+                  const SizedBox(height: 30),
+
+                  // Edit Profile Button
+                  ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD9F2D9),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                    ),
+                    child: const Text(
+                      "Edit Profile",
+                      style: TextStyle(color: Colors.black, fontSize: 16),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Logout Button
+                  ElevatedButton(
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      prefs.remove('user'); // clear session
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginFormScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                    ),
+                    child: const Text(
+                      "Logout",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 15),
-
-            // Name
-            const Text(
-              "Rushikesh Shinde",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              "rushikesh@example.com",
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-
-            // Profile Info Cards
-            _buildProfileTile(Icons.phone, "Phone", "+91 8010524625"),
-            const SizedBox(height: 10),
-            _buildProfileTile(Icons.cake, "Date of Birth", "03/01/2003"),
-            const SizedBox(height: 10),
-            _buildProfileTile(Icons.flag, "Country", "India"),
-            const SizedBox(height: 10),
-            _buildProfileTile(Icons.credit_card, "Credits", "10 Remaining"),
-
-            const SizedBox(height: 30),
-
-            // Edit Profile Button
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD9F2D9),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              ),
-              child: const Text(
-                "Edit Profile",
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Logout Button
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              ),
-              child: const Text(
-                "Logout",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

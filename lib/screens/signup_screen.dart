@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'package:number_aacharya/services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -22,57 +23,109 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+
+  String? _serverOtp; // store OTP for testing/dev
 
   bool _validatePassword(String password) {
     final regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$');
     return regex.hasMatch(password);
   }
 
-  void _nextStep() {
-    if (_step == 1) {
-      if (_nameController.text.isEmpty ||
-          _emailController.text.isEmpty ||
-          _mobileController.text.length != 10 ||
-          _userType == null ||
-          !_agreeTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please complete all fields and agree to terms")),
-        );
-        return;
+  Future<void> _nextStep() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      if (_step == 1) {
+        if (_nameController.text.isEmpty ||
+            _emailController.text.isEmpty ||
+            _mobileController.text.length != 10 ||
+            _userType == null ||
+            !_agreeTerms) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Please complete all fields and agree to terms")),
+          );
+        } else {
+          final response = await ApiService.getRegistrationOtp(_mobileController.text);
+
+          print("OTP API Response: $response");
+
+          if (response['data'] != null && response['data'].isNotEmpty) {
+            final data = response['data'][0];
+            final message = data['message'] ?? 'OTP sent successfully';
+            _serverOtp = data['otp']; // for debug/dev
+            print("DEBUG OTP: $_serverOtp"); // don’t use in production
+
+            setState(() => _step = 2);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Failed to send OTP")),
+            );
+          }
+        }
+      } else if (_step == 2) {
+        if (_otpController.text.length != 6) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Enter a valid 6-digit OTP")),
+          );
+        } else if (_serverOtp != null && _otpController.text != _serverOtp) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Invalid OTP")),
+          );
+        } else {
+          setState(() => _step = 3);
+        }
+      } else if (_step == 3) {
+        if (!_validatePassword(_passwordController.text)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Password must have 1 uppercase, 1 lowercase, 1 number, 1 special char, and be at least 6 chars long")),
+          );
+        } else if (_passwordController.text != _confirmPasswordController.text) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Passwords do not match")),
+          );
+        } else {
+          final response = await ApiService.register(
+            fullName: _nameController.text,
+            mobileNo: _mobileController.text,
+            emailId: _emailController.text,
+            userType: _userType!,
+            password: _passwordController.text,
+          );
+
+          print("Registration API Response: $response");
+
+          if (response['data'] != null && response['data'].isNotEmpty) {
+            final message = response['data'][0]['message'] ?? "Registration successful";
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(response['message'] ?? 'Registration failed')),
+            );
+          }
+        }
       }
-    }
-    if (_step == 2) {
-      if (_otpController.text.length != 6) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Enter a valid 6-digit OTP")),
-        );
-        return;
-      }
-    }
-    if (_step == 3) {
-      if (!_validatePassword(_passwordController.text)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Password must have 1 uppercase, 1 lowercase, 1 number, 1 special char, and be at least 6 chars long")),
-        );
-        return;
-      }
-      if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Passwords do not match")),
-        );
-        return;
-      }
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
       );
-      return;
+    } finally {
+      setState(() => _isLoading = false);
     }
-    setState(() {
-      _step++;
-    });
   }
 
   Widget _buildStep1() {
@@ -210,7 +263,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 backgroundColor: const Color(0xFF7DC19D),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: Text(_step == 3 ? "Submit" : "Continue"),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(_step == 3 ? "Submit" : "Continue"),
             ),
           ],
         ),

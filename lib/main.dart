@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:number_aacharya/screens/login_form_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/intro_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/login_selection_screen.dart'; 
 import 'screens/home_screen.dart';
 import 'screens/list_screen.dart';
 import 'screens/search_screen.dart';
@@ -20,14 +21,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
-      // Easily switch the app's starting point
       initialRoute: '/welcome',
-
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/intro': (context) => const IntroScreen(),
-        '/login': (context) => const LoginScreen(),
+        '/login': (context) => const LoginSelectionScreen(), 
+        '/login-form': (context) => const LoginFormScreen(), 
         '/signup': (context) => const SignupScreen(),
         '/home': (context) => const HomeScreen(),
         '/list': (context) => const ListScreen(),
