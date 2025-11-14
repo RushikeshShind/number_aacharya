@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:number_aacharya/screens/home_screen.dart';
 import 'package:number_aacharya/screens/signup_screen.dart';
+import 'package:number_aacharya/screens/ForgotPasswordScreen.dart';
 import 'package:number_aacharya/services/api_service.dart';
 
 class LoginFormScreen extends StatefulWidget {
@@ -12,11 +14,10 @@ class LoginFormScreen extends StatefulWidget {
 }
 
 class _LoginFormScreenState extends State<LoginFormScreen> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -25,208 +26,396 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
     super.dispose();
   }
 
-  Future<void> _saveCredentials(String username, String password, String systemUserId) async {
+  Future<void> _saveUser(Map<String, dynamic> user, String password) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('username', username);
+    await prefs.setString('user', jsonEncode(user));
+    await prefs.setString('system_user_id', '${user['system_user_id']}');
+    await prefs.setString('username', user['mobile_no']);
     await prefs.setString('password', password);
-    await prefs.setString('system_user_id', systemUserId);
+  }
+
+  bool _validateInputs() {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty && password.isEmpty) {
+      _showErrorSnackBar('Please enter username and password');
+      return false;
+    } else if (username.isEmpty) {
+      _showErrorSnackBar('Please enter username');
+      return false;
+    } else if (password.isEmpty) {
+      _showErrorSnackBar('Please enter password');
+      return false;
+    }
+    return true;
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFD32F2F),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   Future<void> _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_validateInputs()) return;
+
+    setState(() => _isLoading = true);
 
     try {
       final response = await ApiService.login(
-        _usernameController.text,
-        _passwordController.text,
+        _usernameController.text.trim(),
+        _passwordController.text.trim(),
       );
-      print('Login response: $response');
 
-      if (response.containsKey('data') && response['data'] is List && response['data'].isNotEmpty) {
-        final message = response['data'][0]['message']?.toString() ?? '';
+      if (response.containsKey('data') &&
+          response['data'] is List &&
+          response['data'].isNotEmpty) {
+        final user = response['data'][0];
+        final message = user['message']?.toString() ?? '';
+
         if (message.toLowerCase().contains('successful')) {
-          final systemUserId = response['data'][0]['system_user_id'].toString();
-
-          // Save creds
-          await _saveCredentials(
-            _usernameController.text,
-            _passwordController.text,
-            systemUserId,
-          );
-
+          await _saveUser(user, _passwordController.text.trim());
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message.isNotEmpty ? message : 'Invalid username or password')),
+          _showErrorSnackBar(
+            message.isNotEmpty ? message : 'Invalid username or password',
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid response from server')),
-        );
+        _showErrorSnackBar('Invalid response from server');
       }
     } catch (e) {
-      print('Login error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Internet connection issue. Please try again.')),
-      );
+      _showErrorSnackBar('Internet connection issue. Please try again.');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.25,
-              child: Image.asset(
-                'assets/images/login.png',
-                fit: BoxFit.contain,
-                width: screenWidth * 0.9,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: screenHeight * 0.08),
-
-                    Text(
-                      "Number",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.09,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4BAF8D),
-                      ),
-                    ),
-                    Text(
-                      "Aacharya",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.09,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF4BAF8D),
-                      ),
-                    ),
-
-                    SizedBox(height: screenHeight * 0.015),
-
-                    const Text(
-                      "Unlock your destiny through\nnumerology",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
-                    ),
-
-                    SizedBox(height: screenHeight * 0.12),
-
-                    _buildInputField(
-                      controller: _usernameController,
-                      hint: "Enter your username",
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildInputField(
-                      controller: _passwordController,
-                      hint: "Enter your password",
-                      isPassword: true,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    _buildRoundedButton(text: "Submit", onTap: _login),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SignupScreen()),
-                        );
-                      },
-                      child: const Text(
-                        "Don't have an account? Sign Up",
-                        style: TextStyle(color: Color(0xFF4BAF8D), fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(color: Color(0xFF4BAF8D)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoundedButton({required String text, required VoidCallback onTap}) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    return SizedBox(
-      width: screenWidth * 0.8,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFDDF6D2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          elevation: 3,
-        ),
-        child: Text(text, style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w500)),
-      ),
-    );
   }
 
   Widget _buildInputField({
     required TextEditingController controller,
     required String hint,
+    required IconData icon,
     bool isPassword = false,
   }) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.85,
       decoration: BoxDecoration(
-        color: const Color(0xFFDDF6D2),
-        borderRadius: BorderRadius.circular(25),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withOpacity(0.15),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: 0,
+          ),
         ],
+        border: Border.all(
+          color: const Color(0xFF2E7D32).withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword && !_isPasswordVisible,
-        style: const TextStyle(fontSize: 16),
+        style: const TextStyle(
+          fontSize: 16,
+          fontFamily: 'Arial',
+          color: Color(0xFF1B5E20),
+        ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(fontSize: 16, color: Colors.black54),
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          hintStyle: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade500,
+            fontFamily: 'Arial',
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: const Color(0xFF2E7D32),
+            size: 22,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 20,
+          ),
           border: InputBorder.none,
           suffixIcon: isPassword
               ? IconButton(
-                  icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
-                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
+                    color: const Color(0xFF2E7D32),
+                    size: 22,
+                  ),
+                  onPressed: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
                 )
               : null,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFF1F8F4),
+              Colors.white,
+              const Color(0xFFFFF3F3),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                SizedBox(height: height * 0.06),
+                
+                // Logo with decorative container
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2E7D32).withOpacity(0.2),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/images/report.png',
+                    width: width * 0.35,
+                    height: width * 0.35,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                
+                SizedBox(height: height * 0.04),
+                
+                // App Title
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+                  ).createShader(bounds),
+                  child: Text(
+                    "Number Aacharya",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: "Arial",
+                      fontSize: width * 0.085,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: height * 0.015),
+                
+                // Subtitle
+                Text(
+                  "Unlock your destiny through numerology",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: "Arial",
+                    fontSize: width * 0.04,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                
+                SizedBox(height: height * 0.05),
+                
+                // Login Card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2E7D32).withOpacity(0.1),
+                        blurRadius: 30,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Welcome Back!",
+                        style: TextStyle(
+                          fontFamily: "Arial",
+                          fontSize: width * 0.065,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1B5E20),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Please login to continue",
+                        style: TextStyle(
+                          fontFamily: "Arial",
+                          fontSize: width * 0.038,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      
+                      // Username Field
+                      _buildInputField(
+                        controller: _usernameController,
+                        hint: "Enter your username",
+                        icon: Icons.person_outline_rounded,
+                      ),
+                      
+                      const SizedBox(height: 18),
+                      
+                      // Password Field
+                      _buildInputField(
+                        controller: _passwordController,
+                        hint: "Enter your password",
+                        icon: Icons.lock_outline_rounded,
+                        isPassword: true,
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Forgot Password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "Forgot password?",
+                            style: TextStyle(
+                              fontFamily: 'Arial',
+                              fontSize: 14,
+                              color: const Color(0xFFD32F2F),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 28),
+                      
+                      // Login Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    fontFamily: 'Arial',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                SizedBox(height: height * 0.03),
+                
+                // Sign Up Link
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SignupScreen(),
+                      ),
+                    );
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      text: "Don't have an account? ",
+                      style: TextStyle(
+                        fontFamily: "Arial",
+                        fontSize: width * 0.04,
+                        color: Colors.grey.shade700,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Sign Up",
+                          style: TextStyle(
+                            fontFamily: "Arial",
+                            fontSize: width * 0.04,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: height * 0.03),
+              ],
+            ),
+          ),
         ),
       ),
     );

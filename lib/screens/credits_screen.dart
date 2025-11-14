@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+import 'package:number_aacharya/services/api_service.dart';
+import 'PaymentScreen.dart';
 
 class CreditsScreen extends StatefulWidget {
   const CreditsScreen({super.key});
@@ -8,207 +9,405 @@ class CreditsScreen extends StatefulWidget {
   State<CreditsScreen> createState() => _CreditsScreenState();
 }
 
-class _CreditsScreenState extends State<CreditsScreen> {
-  int selectedIndex = -1;
+class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProviderStateMixin {
+  int _currentCredits = 0;
+  List<Map<String, dynamic>> _creditPacks = [];
+  bool _isLoading = true;
+  Map<String, dynamic>? _selectedPack;
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
 
-  final List<Map<String, dynamic>> creditOptions = [
-    {"label": "01 Credit", "price": 250.0, "icon": Icons.add_circle_outline},
-    {"label": "05 Credits", "price": 1000.0, "icon": Icons.arrow_upward},
-    {"label": "10 Credits", "price": 1500.0, "icon": Icons.account_balance},
-    {"label": "20 Credits", "price": 2500.0, "icon": Icons.savings},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeInOut,
+    );
+    _fetchCredits();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchCredits() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userRes = await ApiService.getUserCredits();
+      if (userRes["data"] != null && userRes["data"].isNotEmpty) {
+        setState(() {
+          _currentCredits = userRes["data"][0]["credit_balance"] ?? 0;
+        });
+      }
+
+      final masterRes = await ApiService.getCreditsMaster();
+      if (masterRes["data"] != null) {
+        setState(() {
+          _creditPacks = List<Map<String, dynamic>>.from(masterRes["data"] as List);
+        });
+      }
+      _animController.forward();
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _selectPack(Map<String, dynamic> pack) {
+    setState(() {
+      _selectedPack = pack;
+    });
+  }
+
+  Future<void> _goToPayment() async {
+    if (_selectedPack == null) return;
+
+    final result = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => PaymentScreen(
+          creditsId: _selectedPack!['credits_id'].toString(),
+          noOfCredits: _selectedPack!['no_of_credits'].toString(),
+          amount: _selectedPack!['amount'].toString(),
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+
+    if (result == true) {
+      _fetchCredits();
+    }
+  }
+
+  String _getCreditIcon(int credits) {
+    switch (credits) {
+      case 1: return "assets/icons/credit1.png";
+      case 5: return "assets/icons/credit5.png";
+      case 10: return "assets/icons/credit10.png";
+      case 20: return "assets/icons/credit20.png";
+      default: return "assets/icons/maincredit.png";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = screenWidth * 0.05;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            color: const Color(0xFFD9F2D9),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  "Credit",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                )
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Title
-          const Center(
-            child: Text(
-              "Buy Credits",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Current credit display
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Custom App Bar
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: screenHeight * 0.02,
               ),
               child: Row(
                 children: [
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD9F2D9),
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.add, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Credit : 01",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      Text(
-                        "1 search remaining",
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  SizedBox(width: screenWidth * 0.04),
+                  const Text(
+                    "Credits",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF008000),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          const SizedBox(height: 20),
-
-          // Credit options
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: creditOptions.length,
-              itemBuilder: (context, index) {
-                final option = creditOptions[index];
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedIndex = index;
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: selectedIndex == index
-                            ? Colors.green
-                            : Colors.transparent,
-                        width: 1.5,
+            // Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF008000)),
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFD9F2D9),
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(option["icon"], size: 28),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            option["label"],
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        Text(
-                          "₹${option["price"].toStringAsFixed(1)} /-",
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+                    )
+                  : FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Current Credits Card
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(screenWidth * 0.06),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFF008000), Color(0xFF00A000)],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF008000).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    "Available Credits",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(height: screenHeight * 0.015),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        "assets/icons/maincredit.png",
+                                        width: screenWidth * 0.08,
+                                        height: screenWidth * 0.08,
+                                      ),
+                                      SizedBox(width: screenWidth * 0.03),
+                                      Text(
+                                        "$_currentCredits",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: screenWidth * 0.12,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: -1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
 
-          // Continue Button
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD9F2D9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  // Action for continue
-                },
-                child: const Text(
-                  "Continue",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
+                            SizedBox(height: screenHeight * 0.03),
+
+                            // Buy Credits Title
+                            Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF008000),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  "Buy Credits",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1A1A1A),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: screenHeight * 0.02),
+
+                            // Credit Packs
+                            ...List.generate(_creditPacks.length, (index) {
+                              final pack = _creditPacks[index];
+                              final isSelected = _selectedPack != null &&
+                                  _selectedPack!['credits_id'] == pack['credits_id'];
+
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: screenHeight * 0.015),
+                                child: GestureDetector(
+                                  onTap: () => _selectPack(pack),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                    padding: EdgeInsets.all(screenWidth * 0.04),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF008000)
+                                            : Colors.transparent,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isSelected
+                                              ? const Color(0xFF008000).withOpacity(0.15)
+                                              : Colors.black.withOpacity(0.05),
+                                          blurRadius: isSelected ? 12 : 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: screenWidth * 0.15,
+                                          height: screenWidth * 0.15,
+                                          padding: EdgeInsets.all(screenWidth * 0.025),
+                                          decoration: BoxDecoration(
+                                            color: isSelected 
+                                                ? const Color(0xFF008000).withOpacity(0.15)
+                                                : const Color(0xFFE8F5E9),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Image.asset(
+                                            _getCreditIcon(pack['no_of_credits']),
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                        SizedBox(width: screenWidth * 0.04),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "${pack['no_of_credits']} Credits",
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.045,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: const Color(0xFF1A1A1A),
+                                                ),
+                                              ),
+                                              SizedBox(height: screenHeight * 0.005),
+                                              Text(
+                                                "Perfect for regular use",
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.032,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              "₹${pack['amount']}",
+                                              style: TextStyle(
+                                                fontSize: screenWidth * 0.05,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFF008000),
+                                              ),
+                                            ),
+                                            if (isSelected)
+                                              Container(
+                                                margin: const EdgeInsets.only(top: 6),
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFF008000),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.check,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+
+                            SizedBox(height: screenHeight * 0.12),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: _isLoading
+          ? null
+          : Container(
+              width: screenWidth - (horizontalPadding * 2),
+              height: 56,
+              margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              decoration: BoxDecoration(
+                gradient: _selectedPack != null
+                    ? const LinearGradient(
+                        colors: [Color(0xFF008000), Color(0xFF00A000)],
+                      )
+                    : LinearGradient(
+                        colors: [Colors.grey[300]!, Colors.grey[400]!],
+                      ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: _selectedPack != null
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF008000).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _selectedPack != null ? _goToPayment : null,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Center(
+                    child: Text(
+                      _selectedPack != null ? "Continue to Payment" : "Select a Credit Pack",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _selectedPack != null ? Colors.white : Colors.grey[600],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          )
-        ],
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

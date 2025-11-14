@@ -70,9 +70,7 @@ class _IntroScreenState extends State<IntroScreen> {
                     height: 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _currentPage == index
-                          ? Colors.green
-                          : Colors.grey,
+                      color: _currentPage == index ? Colors.green : Colors.grey,
                     ),
                   ),
                 ),
@@ -87,10 +85,10 @@ class _IntroScreenState extends State<IntroScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, '/login');
+                    Navigator.pushNamed(context, '/login-form');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDDF6D2),
+                    backgroundColor: const Color(0xFF008000),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
@@ -98,10 +96,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   ),
                   child: Text(
                     _currentPage == 0 ? "Skip" : "Next",
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                    ),
+                    style: const TextStyle(color: Colors.black, fontSize: 18),
                   ),
                 ),
               ),
