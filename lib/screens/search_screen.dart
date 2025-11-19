@@ -480,7 +480,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             style: TextStyle(
               fontSize: width * 0.04,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+             color: const Color(0xFF008000),
             ),
           ),
         ),
@@ -538,7 +538,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             style: TextStyle(
               fontSize: width * 0.04,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+              color: const Color(0xFF008000),
             ),
           ),
         ),
@@ -593,7 +593,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   Widget _buildPhoneField(double width) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -602,7 +602,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             style: TextStyle(
               fontSize: width * 0.04,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+              color: const Color(0xFF008000),
             ),
           ),
         ),

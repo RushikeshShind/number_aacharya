@@ -88,14 +88,31 @@ class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProvider
     }
   }
 
-  String _getCreditIcon(int credits) {
+  IconData _getCreditIcon(int credits) {
     switch (credits) {
-      case 1: return "assets/icons/credit1.png";
-      case 5: return "assets/icons/credit5.png";
-      case 10: return "assets/icons/credit10.png";
-      case 20: return "assets/icons/credit20.png";
-      default: return "assets/icons/maincredit.png";
+      case 1: return Icons.stars_rounded;
+      case 5: return Icons.star_purple500_rounded;
+      case 10: return Icons.emoji_events_rounded;
+      case 30: return Icons.workspace_premium_rounded;
+      case 50: return Icons.military_tech_rounded;
+      default: return Icons.monetization_on_rounded;
     }
+  }
+
+  Color _getIconColor(int credits) {
+    switch (credits) {
+      case 1: return const Color(0xFFFFB300);
+      case 5: return const Color(0xFFFF6F00);
+      case 10: return const Color(0xFFE91E63);
+      case 30: return const Color(0xFF9C27B0);
+      case 50: return const Color(0xFF3F51B5);
+      default: return const Color(0xFF008000);
+    }
+  }
+
+  int _calculateDiscount(int original, int current) {
+    if (original <= 0) return 0;
+    return ((original - current) * 100 / original).round();
   }
 
   @override
@@ -252,6 +269,10 @@ class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProvider
                               final pack = _creditPacks[index];
                               final isSelected = _selectedPack != null &&
                                   _selectedPack!['credits_id'] == pack['credits_id'];
+                              final discount = _calculateDiscount(
+                                pack['original_amount'] ?? 0,
+                                pack['amount'] ?? 0,
+                              );
 
                               return Padding(
                                 padding: EdgeInsets.only(bottom: screenHeight * 0.015),
@@ -288,13 +309,14 @@ class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProvider
                                           padding: EdgeInsets.all(screenWidth * 0.025),
                                           decoration: BoxDecoration(
                                             color: isSelected 
-                                                ? const Color(0xFF008000).withOpacity(0.15)
-                                                : const Color(0xFFE8F5E9),
+                                                ? _getIconColor(pack['no_of_credits']).withOpacity(0.15)
+                                                : _getIconColor(pack['no_of_credits']).withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(12),
                                           ),
-                                          child: Image.asset(
+                                          child: Icon(
                                             _getCreditIcon(pack['no_of_credits']),
-                                            fit: BoxFit.contain,
+                                            size: screenWidth * 0.08,
+                                            color: _getIconColor(pack['no_of_credits']),
                                           ),
                                         ),
                                         SizedBox(width: screenWidth * 0.04),
@@ -312,7 +334,7 @@ class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProvider
                                               ),
                                               SizedBox(height: screenHeight * 0.005),
                                               Text(
-                                                "Perfect for regular use",
+                                                pack['description'] ?? "Perfect for regular use",
                                                 style: TextStyle(
                                                   fontSize: screenWidth * 0.032,
                                                   color: Colors.grey[600],
@@ -324,13 +346,52 @@ class _CreditsScreenState extends State<CreditsScreen> with SingleTickerProvider
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
-                                            Text(
-                                              "₹${pack['amount']}",
-                                              style: TextStyle(
-                                                fontSize: screenWidth * 0.05,
-                                                fontWeight: FontWeight.bold,
-                                                color: const Color(0xFF008000),
+                                            if (discount > 0) ...[
+                                              Text(
+                                                "₹${pack['original_amount']}",
+                                                style: TextStyle(
+                                                  fontSize: screenWidth * 0.035,
+                                                  color: Colors.grey[400],
+                                                  decoration: TextDecoration.lineThrough,
+                                                  decorationColor: Colors.grey[400],
+                                                  decorationThickness: 2,
+                                                ),
                                               ),
+                                              SizedBox(height: screenHeight * 0.003),
+                                            ],
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  "₹${pack['amount']}",
+                                                  style: TextStyle(
+                                                    fontSize: screenWidth * 0.05,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: const Color(0xFF008000),
+                                                  ),
+                                                ),
+                                                if (discount > 0) ...[
+                                                  SizedBox(width: screenWidth * 0.02),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFFFF5252),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      "$discount% OFF",
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                             if (isSelected)
                                               Container(

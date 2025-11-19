@@ -23,7 +23,22 @@ class AppColors {
     'Red': const Color(0xFFF44336),
   };
 }
+class PageViewPhysicsWrapper extends StatelessWidget {
+  final ScrollPhysics physics;
+  final Widget child;
+  const PageViewPhysicsWrapper({super.key, required this.physics, required this.child});
 
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryScrollController(
+      controller: ScrollController(),
+      child: ScrollConfiguration(
+        behavior: ScrollBehavior().copyWith(physics: physics),
+        child: child,
+      ),
+    );
+  }
+}
 class ViewReportScreen extends StatefulWidget {
   final Map<String, dynamic> reportData;
   const ViewReportScreen({super.key, required this.reportData});
@@ -106,64 +121,82 @@ class _ViewReportScreenState extends State<ViewReportScreen>
   }
 
   void _onPageChanged(int index) {
-    setState(() {
-      currentPage = index;
-      if (index > 0) _showTutorial = false;
-      if (index == 14) _categoryIndex = 0;
-    });
-  }
+  if (index < 0 || index >= totalPages) return; // ← Ye line add karo
+  setState(() {
+    currentPage = index;
+    if (index > 0) _showTutorial = false;
+    if (index == 14) _categoryIndex = 0;
+  });
+}
 
   void _goToSearch() => Navigator.pushReplacementNamed(context, '/search');
   void _goToHome() =>
       Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
 
   @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final bool hideHeaderFooter = [2, 3].contains(currentPage);
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: AnimatedBuilder(
-        animation: _animController,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnim.value,
-            child: Opacity(
-              opacity: _fadeAnim.value,
-              child: Stack(
+Widget build(BuildContext context) {
+  final size = MediaQuery.of(context).size;
+  final bool hideHeaderFooter = false;
+final bool isTransparent = [2, 3].contains(currentPage);
+
+
+  return Scaffold(
+    backgroundColor: Colors.white,
+    extendBody: false, 
+    body: AnimatedBuilder(
+    animation: _animController,
+    builder: (context, child) {
+      return Transform.scale(
+        scale: _scaleAnim.value,
+        child: Opacity(
+          opacity: _fadeAnim.value,
+          child: Stack(
+            children: [
+              Column(
                 children: [
-                  Column(
-                    children: [
-                      _buildTopHeader(size),
-                      Expanded(
-                        child: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: _onPageChanged,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: totalPages,
-                          itemBuilder: (context, i) => _buildPage(i, size),
-                        ),
+                  if (!hideHeaderFooter) _buildTopHeader(size),
+                  
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: _onPageChanged,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: totalPages,
+                        itemBuilder: (context, i) => _buildPage(i, size),
                       ),
-                      _buildBottomDots(size),
+                    
+                  ),
+                  if (!hideHeaderFooter)
+    Container(
+      padding: EdgeInsets.only(
+        top: size.height * 0.02,
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+      ),
+      child: _buildBottomDots(size),
+    ),
                     ],
                   ),
                   if (_showTutorial && currentPage == 0)
                     _buildTutorialOverlay(size),
-                  if (currentPage == totalPages - 1) _buildFinalButtons(size),
+                  if (currentPage == totalPages - 1)
+                    _buildFinalButtons(size),
                 ],
               ),
             ),
           );
         },
       ),
-    );
-  }
+    
+  );
+}
 
   /* --------------------------------------------------------------------- */
   /*                               UI ELEMENTS                             */
   /* --------------------------------------------------------------------- */
 
-  Widget _buildTutorialOverlay(Size size) => Container(
+  Widget _buildTutorialOverlay(Size size) => GestureDetector(
+  onTap: () {}, // Blocks all taps when tutorial is showing
+  child: Container(
     color: Colors.black.withOpacity(0.6),
     child: Center(
       child: Column(
@@ -183,7 +216,6 @@ class _ViewReportScreenState extends State<ViewReportScreen>
           ElevatedButton(
             onPressed: () {
               setState(() => _showTutorial = false);
-              // Removed the navigation code - now it just dismisses the overlay
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGreen,
@@ -197,68 +229,77 @@ class _ViewReportScreenState extends State<ViewReportScreen>
         ],
       ),
     ),
-  );
+  ),
+);
 
-  Widget _buildFinalButtons(Size size) => Positioned(
-    bottom: size.height * 0.12,
-    left: size.width * 0.1,
-    right: size.width * 0.1,
-    child: Column(
-      children: [
-        ElevatedButton(
-          onPressed: _goToSearch,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryGreen,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.search, color: Colors.white),
-              SizedBox(width: 10),
-              Text(
-                "Search Again",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: _goToHome,
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: AppColors.primaryGreen, width: 2),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.home, color: AppColors.primaryGreen),
-              SizedBox(width: 10),
-              Text(
-                "Exit to Home",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryGreen,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+
+Widget _buildFinalButtons(Size size) => Positioned(
+  bottom: size.height * 0.12,
+  left: size.width * 0.1,
+  right: size.width * 0.1,
+  child: Column(
+    children: [
+    
+      // ElevatedButton(
+      //   onPressed: _goToSearch,
+      //   style: ElevatedButton.styleFrom(
+      //     backgroundColor: AppColors.primaryGreen,
+      //     padding: const EdgeInsets.symmetric(vertical: 16),
+      //     shape: RoundedRectangleBorder(
+      //       borderRadius: BorderRadius.circular(30),
+      //     ),
+      //     elevation: 8,
+      //     shadowColor: AppColors.primaryGreen.withOpacity(0.4),
+      //   ),
+      //   child: const Row(
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     children: [
+      //       Icon(Icons.search, color: Colors.white, size: 24),
+      //       SizedBox(width: 10),
+      //       Text(
+      //         "Search Again",
+      //         style: TextStyle(
+      //           fontSize: 18,
+      //           fontWeight: FontWeight.w600,
+      //           color: Colors.white,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+      
+      const SizedBox(height: 12),
+      
+      // // Exit to Home Button
+      // OutlinedButton(
+      //   onPressed: _goToHome,
+      //   style: OutlinedButton.styleFrom(
+      //     side: const BorderSide(color: AppColors.primaryGreen, width: 2),
+      //     padding: const EdgeInsets.symmetric(vertical: 16),
+      //     shape: RoundedRectangleBorder(
+      //       borderRadius: BorderRadius.circular(30),
+      //     ),
+      //     backgroundColor: Colors.white,
+      //   ),
+      //   child: const Row(
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     children: [
+      //       Icon(Icons.home, color: AppColors.primaryGreen, size: 24),
+      //       SizedBox(width: 10),
+      //       Text(
+      //         "Exit to Home",
+      //         style: TextStyle(
+      //           fontSize: 18,
+      //           fontWeight: FontWeight.w600,
+      //           color: AppColors.primaryGreen,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+    ],
+  ),
+);
 
   /* --------------------------------------------------------------------- */
   /*                               PAGE BUILDER                            */
@@ -289,7 +330,7 @@ class _ViewReportScreenState extends State<ViewReportScreen>
       _ => const SizedBox.shrink(),
     };
 
-    if (!hasBg) return page;
+ if (!hasBg) return page;
 
     return Container(
       decoration: const BoxDecoration(
@@ -304,10 +345,10 @@ class _ViewReportScreenState extends State<ViewReportScreen>
 
 Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
     padding: EdgeInsets.only(
-      top: MediaQuery.of(context).padding.top + 16,
-      bottom: 16,
-      left: 20,
-      right: 20,
+      top: MediaQuery.of(context).padding.top + 12,
+      bottom: 12,
+      left: size.width * 0.04,
+      right: size.width * 0.04,
     ),
     decoration: const BoxDecoration(color: Colors.transparent),
     child: Row(
@@ -317,11 +358,11 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
         // Logo on the left
         Image.asset(
           'assets/images/AMIG.png',
-          height: size.width * 0.15,
-          width: size.width * 0.15,
+          height: size.width * 0.20, // Slightly smaller for small screens
+          width: size.width * 0.20,
           fit: BoxFit.contain,
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: size.width * 0.02),
         // Text content in the center
         Expanded(
           child: Column(
@@ -330,16 +371,16 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
               Text(
                 "Number Aacharya",
                 style: TextStyle(
-                  fontSize: size.width * 0.055,
+                  fontSize: size.width * 0.048, // More responsive
                   fontWeight: FontWeight.bold,
                   color: isTransparent ? Colors.white : AppColors.primaryGreen,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: size.height * 0.003),
               Text(
                 "Personal numerology summary",
                 style: TextStyle(
-                  fontSize: size.width * 0.035,
+                  fontSize: size.width * 0.032, // More responsive
                   color: isTransparent
                       ? Colors.white.withOpacity(0.9)
                       : Colors.black87,
@@ -354,37 +395,42 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           icon: Icon(
             Icons.logout,
             color: isTransparent ? Colors.white : AppColors.primaryGreen,
-            size: size.width * 0.06,
+            size: size.width * 0.055, // Slightly smaller
           ),
           tooltip: 'Exit to Home',
+          padding: EdgeInsets.all(size.width * 0.02),
+          constraints: const BoxConstraints(),
         ),
       ],
     ),
   );
+
+
   Widget _buildBottomDots(Size size, {bool isTransparent = false}) => Container(
-    color: Colors.transparent,
-    padding: EdgeInsets.symmetric(vertical: size.height * 0.02),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        totalPages,
-        (i) => AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          height: 8,
-          width: currentPage == i ? 24 : 8,
-          decoration: BoxDecoration(
-            color: currentPage == i
-                ? (isTransparent ? Colors.white : AppColors.primaryGreen)
-                : (isTransparent
-                      ? Colors.white.withOpacity(0.5)
-                      : AppColors.lightGray),
-            borderRadius: BorderRadius.circular(4),
-          ),
+  color: Colors.transparent,
+  padding: const EdgeInsets.symmetric(vertical: 8),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: List.generate(
+      totalPages,
+      (i) => AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        height: 8,
+        width: currentPage == i ? 24 : 8,
+        decoration: BoxDecoration(
+          color: currentPage == i
+              ? (isTransparent ? Colors.white : AppColors.primaryGreen)
+              : (isTransparent
+                    ? Colors.white.withOpacity(0.5)
+                    : AppColors.lightGray),
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
     ),
-  );
+  ),
+);
+
   /* --------------------------------------------------------------------- */
   /*                               PAGE 1                                 */
   /* --------------------------------------------------------------------- */
@@ -422,15 +468,15 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
             ),
             const SizedBox(height: 20),
             Text(
-              "${fname.toUpperCase()} ${lname.toUpperCase()}",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: size.width * 0.065,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryGreen,
-                letterSpacing: 1.5,
-              ),
-            ),
+  "${fname.toUpperCase()} ${lname.toUpperCase()}",
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: size.width * 0.058, 
+    fontWeight: FontWeight.bold,
+    color: AppColors.primaryGreen,
+    letterSpacing: size.width * 0.003, 
+  ),
+),
             const SizedBox(height: 30),
             _labelWithArrow("First name", fname, true),
             const SizedBox(height: 20),
@@ -533,20 +579,19 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
   /*                               PAGE 2                                 */
   /* --------------------------------------------------------------------- */
   Widget _buildPage2(Size size) {
-    final total = result['mobileNumberTotal'] ?? {};
-    final steps = List<int>.from(total['intermediateResults'] ?? []);
-    final phone = result['phone'] ?? '';
+  final total = result['mobileNumberTotal'] ?? {};
+  final steps = List<int>.from(total['intermediateResults'] ?? []);
+  final phone = result['phone'] ?? '';
 
-    return _buildSafePage(
-      size,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  return _buildSafePage(
+  size,
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
           // Title with arrow
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               const SizedBox(width: 8),
               Expanded(
                 child: RichText(
@@ -631,7 +676,7 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
                   text: "If your mobile number is ",
                   style: TextStyle(color: Colors.black.withOpacity(0.6)),
                 ),
-                TextSpan(
+                const TextSpan(
                   text: "9876543210",
                   style: TextStyle(
                     color: AppColors.primaryGreen,
@@ -693,8 +738,8 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
                       ),
                     ),
                     if (!isLast)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Icon(
                           Icons.arrow_forward,
                           color: Colors.black87,
@@ -711,9 +756,9 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           const SizedBox(height: 20),
         ],
       ),
-    );
-  }
-
+    
+  );
+}
   /* --------------------------------------------------------------------- */
   /*                               PAGE 3 & 4                              */
   /* --------------------------------------------------------------------- */
@@ -742,12 +787,13 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
   }
 
   Widget _gradientPageWithImage(
-    Size size,
-    String title,
-    String num,
-    String desc,
-    String imagePath,
-  ) => Container(
+  Size size,
+  String title,
+  String num,
+  String desc,
+  String imagePath,
+) {
+  return Container(
     decoration: BoxDecoration(
       image: DecorationImage(image: AssetImage(imagePath), fit: BoxFit.cover),
     ),
@@ -766,85 +812,139 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
         ),
       ),
       child: SafeArea(
+  child: Column(
+    children: [
+
+      // LEFT-ALIGNED HEADER BLOCK
+      Align(
+        alignment: Alignment.centerLeft, // ← ALWAYS LEFT
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: size.width * 0.08,
-            vertical: 20,
+          padding: EdgeInsets.fromLTRB(
+            size.width * 0.06,
+            size.height * 0.02,
+            size.width * 0.06,
+            0,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start, // ← LEFT
             children: [
-              const Spacer(flex: 2),
               Text(
                 "Your",
                 style: TextStyle(
-                  fontSize: size.width * 0.12,
+                  fontSize: size.width * 0.095,
+                  fontWeight: FontWeight.w800,
                   color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: size.width * 0.12,
-                  color: AppColors.primaryGreen,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                "Number",
-                style: TextStyle(
-                  fontSize: size.width * 0.12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                "as per your Date of Birth",
-                style: TextStyle(
-                  fontSize: size.width * 0.025,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w300,
                   height: 1.0,
                 ),
               ),
-              SizedBox(height: size.height * 0.06),
-              Center(
-                child: Text(
-                  num,
-                  style: TextStyle(
-                    fontSize: size.width * 0.45,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    height: 1.0,
-                    letterSpacing: -2,
-                  ),
-                ),
-              ),
-              SizedBox(height: size.height * 0.05),
+
               Text(
-                desc,
-                textAlign: TextAlign.left,
+                title, // Drive Number / Conductor Number
                 style: TextStyle(
-                  fontSize: size.width * 0.037,
-                  color: Colors.white.withOpacity(0.9),
-                  height: 1.6,
-                  fontWeight: FontWeight.w400,
+                  fontSize: size.width * 0.095,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryGreen,
+                  height: 1.0,
                 ),
               ),
-              const Spacer(flex: 3),
-              Align(alignment: Alignment.centerRight, child: _swipeLeft(size)),
-              const SizedBox(height: 20),
+
+              Text(
+                "Number",
+                style: TextStyle(
+                  fontSize: size.width * 0.095,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+
+              SizedBox(height: size.height * 0.005),
+
+              Text(
+                "as per your Date of Birth",
+                style: TextStyle(
+                  fontSize: size.width * 0.032,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w300,
+                  height: 1.2,
+                ),
+              ),
             ],
           ),
         ),
       ),
+      
+
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.06,
+                  vertical: size.height * 0.02,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, // ← ALL LEFT
+                  children: [
+                    SizedBox(height: size.height * 0.06),
+                    
+                    
+                    // Big Number - CENTER ME!
+                    Center(
+                      child: Text(
+                        num,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: size.width * 0.40,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: size.width * -0.002,
+                          height: 0.9,
+                        ),
+                      ),
+                    ),
+
+
+                    SizedBox(height: size.height * 0.03),
+
+                    // Description - LEFT ALIGNED
+                    Text(
+                      desc,
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        fontSize: size.width * 0.038,
+                        color: Colors.white.withOpacity(0.95),
+                        height: 1.5,
+                      ),
+                    ),
+
+                    SizedBox(height: size.height * 0.06),
+                  ],
+                ),
+              ),
+            ),
+
+            // Swipe indicator - RIGHT side
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                size.width * 0.06,
+                0,
+                size.width * 0.06,
+                MediaQuery.of(context).padding.bottom + 16,
+              ),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _swipeLeft(size),
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
+}
+
 
  /* --------------------------------------------------------------------- */
   /*                               PAGE 5 & 6                              */
@@ -1296,7 +1396,7 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           ),
           const Text(
             "Mobile Case Color",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+            style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -1349,7 +1449,7 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           ),
           const Text(
             "Charging Station\nVastu",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+            style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -1402,7 +1502,7 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           ),
           const Text(
             "Lucky Photo\nDirection",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+            style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -1455,7 +1555,7 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           ),
           const Text(
             "Lucky Wallpaper",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+            style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -1907,40 +2007,50 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
             
             const SizedBox(height: 30),
             
-            // Current category analysis with swipe
-            GestureDetector(
-              onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! < 0) {
-                  // Swipe left - next category
-                  setState(() {
-                    _categoryIndex = (_categoryIndex + 1) % availableCategories.length;
-                  });
-                } else if (details.primaryVelocity! > 0) {
-                  // Swipe right - previous category
-                  setState(() {
-                    _categoryIndex = (_categoryIndex - 1 + availableCategories.length) % availableCategories.length;
-                  });
-                }
-              },
-              child: _pairSectionSwipeable(
-                size, 
-                currentCategory.toUpperCase(), 
-                catColor(currentCategory), 
-                categoryItems,
-                _categoryIndex,
-                availableCategories.length,
-                () {
-                  // Next arrow pressed
-                  setState(() {
-                    _categoryIndex = (_categoryIndex + 1) % availableCategories.length;
-                  });
-                },
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            _swipeLeft(size),
-            const SizedBox(height: 20),
+            // Swipe gesture + Next button dono sahi se kaam karenge
+GestureDetector(
+  onHorizontalDragEnd: (details) {
+    if (details.primaryVelocity! < 0) {
+      // Swipe Left → Next
+      setState(() {
+        if (_categoryIndex < availableCategories.length - 1) {
+          _categoryIndex++;
+        } else {
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    } else if (details.primaryVelocity! > 0) {
+      // Swipe Right → Previous
+      setState(() {
+        if (_categoryIndex > 0) _categoryIndex--;
+      });
+    }
+  },
+  child: _pairSectionSwipeable(
+    size,
+    currentCategory.toUpperCase(),
+    catColor(currentCategory),
+    categoryItems,
+    _categoryIndex,
+    availableCategories.length,
+    () {
+      // Next arrow button pressed
+      setState(() {
+        if (_categoryIndex < availableCategories.length - 1) {
+          _categoryIndex++;
+        } else {
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    },
+  ),
+),
           ],
         ),
       ),
@@ -2116,31 +2226,230 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
           ],
         ),
       );
-       /* --------------------------------------------------------------------- */
-  /*                               PAGE 16                                */
-  /* --------------------------------------------------------------------- */
-  Widget _buildPage16(Size size) => _buildSafePage(
-    size,
-    const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "Report Complete",
-            style: TextStyle(
-              fontSize: 32,
-              color: AppColors.primaryGreen,
-              fontWeight: FontWeight.bold,
+Widget _buildPage16(Size size) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      // Dynamic scaling based on screen width
+      double w = constraints.maxWidth;
+      double h = constraints.maxHeight;
+
+      double scale = (w / 390).clamp(0.75, 1.2); 
+      // 390 = iPhone 12 width → baseline
+
+      return Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: h,
+              ),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: w * 0.06),
+                  child: Column(
+                    children: [
+                      SizedBox(height: h * 0.05),
+
+                      // ✔ Success Icon (Auto Scales)
+                      Container(
+                        padding: EdgeInsets.all(w * 0.05 * scale),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primaryGreen.withAlpha(30),
+                          border: Border.all(
+                            color: AppColors.primaryGreen,
+                            width: 3 * scale,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.check_circle,
+                          size: w * 0.22 * scale,
+                          color: AppColors.primaryGreen,
+                        ),
+                      ),
+
+                      SizedBox(height: h * 0.025),
+
+                      // ✔ Title (Auto Scales)
+                      Text(
+                        "Report Complete",
+                        style: TextStyle(
+                          fontSize: w * 0.08 * scale,
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      SizedBox(height: h * 0.015),
+
+                      // ✔ Decorative line
+                      Container(
+                        width: w * 0.2,
+                        height: 4 * scale,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [
+                            AppColors.primaryGreen.withAlpha(51),
+                            AppColors.primaryGreen,
+                            AppColors.primaryGreen.withAlpha(51),
+                          ]),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+
+                      SizedBox(height: h * 0.03),
+
+                      // ✔ Premium Card – Fully Responsive
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: h * 0.025,
+                          horizontal: w * 0.05,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(240),
+                          borderRadius: BorderRadius.circular(20 * scale),
+                          border: Border.all(
+                            color: AppColors.primaryGreen.withAlpha(80),
+                            width: 2 * scale,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryGreen.withAlpha(50),
+                              blurRadius: 20 * scale,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.diamond,
+                              color: AppColors.primaryGreen,
+                              size: w * 0.09 * scale,
+                            ),
+                            SizedBox(height: 10),
+                            RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: TextStyle(
+                                  fontSize: w * 0.038 * scale,
+                                  height: 1.5,
+                                  color: Colors.black87,
+                                ),
+                                children: const [
+                                  TextSpan(
+                                    text: "A premium life needs a premium number. ",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                  TextSpan(text: "Discover yours with the "),
+                                  TextSpan(
+                                    text: "Number Aacharya report",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        "—before you purchase your next mobile number.",
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // ✔ Bottom Buttons (Auto Shrink on Small Devices)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: h * 0.02,
+                          bottom: 16,
+                        ),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _goToSearch,
+                                icon: Icon(Icons.search, size: 20, color: Colors.white),
+                                label: Text(
+                                  "Search Again",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryGreen,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _goToHome,
+                                icon: Icon(Icons.home, size: 20, color: AppColors.primaryGreen),
+                                label: Text(
+                                  "Exit to Home",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGreen,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                    color: AppColors.primaryGreen,
+                                    width: 2,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          SizedBox(height: 20),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
+}
 
   /* --------------------------------------------------------------------- */
-  /*                               HELPERS                                */
+  /*                               HELPERS                                 */
   /* --------------------------------------------------------------------- */
   Widget _swipeLeft(Size size) => Align(
     alignment: Alignment.centerRight,
@@ -2165,22 +2474,25 @@ Widget _buildTopHeader(Size size, {bool isTransparent = false}) => Container(
     ),
   );
 
-  Widget _buildSafePage(Size size, Widget child) {
-    return SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: size.width * 0.06,
-              vertical: 20,
+ Widget _buildSafePage(Size size, Widget child) {
+  return SafeArea(
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            horizontal: size.width * 0.05, // Slightly smaller padding
+            vertical: size.height * 0.02, // Responsive vertical padding
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - (size.height * 0.04),
             ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(child: child),
-            ),
-          );
-        },
-      ),
-    );
-  }
+            child: IntrinsicHeight(child: child),
+          ),
+        );
+      },
+    ),
+  );
+}
 }

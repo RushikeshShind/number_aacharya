@@ -381,94 +381,137 @@ class _SignupScreenState extends State<SignupScreen> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2E7D32).withOpacity(0.1),
-                    offset: const Offset(0, 4),
-                    blurRadius: 12,
-                  ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF2E7D32).withOpacity(0.2),
-                ),
+
+Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Container(
+      width: 110,
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withOpacity(0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF2E7D32).withOpacity(0.2),
+        ),
+      ),
+      child: _isLoadingCountries
+          ? const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              child: _isLoadingCountries
-                  ? const Center(child: CircularProgressIndicator())
-                  : DropdownButtonFormField<Map<String, dynamic>>(
-                      decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                        border: InputBorder.none,
-                      ),
-                      value: _selectedCountry,
-                      isExpanded: true,
-                      items: _countries.map((country) {
-                        return DropdownMenuItem<Map<String, dynamic>>(
-                          value: country,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(3),
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 0.5,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(2.5),
-                                  child: Image.network(
-                                    country['flag_file'] ?? '',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.flag_outlined, size: 12, color: Colors.grey[400]);
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  country['country_code'] ?? '',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+            )
+          : DropdownButtonFormField<Map<String, dynamic>>(
+              decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+                border: InputBorder.none,
+              ),
+              value: _selectedCountry,
+              isExpanded: true,
+              items: _countries.map((country) {
+                return DropdownMenuItem<Map<String, dynamic>>(
+                  value: country,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 15,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(3),
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 0.5,
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedCountry = val;
-                          _updateMaxMobileLength();
-                        });
-                      },
-                    ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2.5),
+                          child: Image.network(
+                            country['flag_file'] ?? '',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.flag_outlined,
+                                size: 12,
+                                color: Colors.grey[400],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          country['country_code'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedCountry = val;
+                  _updateMaxMobileLength();
+                });
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildInputField(
-                controller: _mobileController,
-                label: "Mobile Number",
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: _maxMobileLength,
-              ),
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E7D32).withOpacity(0.1),
+              offset: const Offset(0, 4),
+              blurRadius: 12,
             ),
           ],
+          border: Border.all(
+            color: const Color(0xFF2E7D32).withOpacity(0.2),
+          ),
         ),
+        child: TextField(
+          controller: _mobileController,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          maxLength: _maxMobileLength,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF1B5E20)),
+          decoration: InputDecoration(
+            labelText: "Mobile Number",
+            labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            prefixIcon: const Icon(
+              Icons.phone_outlined,
+              color: Color(0xFF2E7D32),
+              size: 22,
+            ),
+            counterText: "",
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            border: InputBorder.none,
+          ),
+        ),
+      ),
+    ),
+  ],
+),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(

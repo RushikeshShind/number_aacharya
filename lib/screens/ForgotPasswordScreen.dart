@@ -75,7 +75,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _showSuccessSnackBar(message);
         } else {
           _showErrorSnackBar(
-            message.isNotEmpty ? message : "Invalid username. Please enter a valid username.",
+            message.isNotEmpty
+                ? message
+                : "Invalid username. Please enter a valid username.",
           );
         }
       } else {
@@ -179,7 +181,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             blurRadius: 12,
           ),
         ],
-        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3), width: 2),
+        border: Border.all(
+          color: const Color(0xFF2E7D32).withOpacity(0.3),
+          width: 2,
+        ),
       ),
       child: TextField(
         controller: controller,
@@ -239,7 +244,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 children: [
                   Icon(
                     rule.value ? Icons.check_circle : Icons.cancel,
-                    color: rule.value ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F),
+                    color: rule.value
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFFD32F2F),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -247,7 +254,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     rule.key,
                     style: TextStyle(
                       fontSize: 12,
-                      color: rule.value ? const Color(0xFF1B5E20) : const Color(0xFFD32F2F),
+                      color: rule.value
+                          ? const Color(0xFF1B5E20)
+                          : const Color(0xFFD32F2F),
                     ),
                   ),
                 ],
@@ -293,15 +302,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: isCompleted
                           ? const Color(0xFF2E7D32)
                           : isActive
-                              ? Colors.white
-                              : Colors.grey.shade200,
+                          ? Colors.white
+                          : Colors.grey.shade200,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: isActive
                             ? const Color(0xFF2E7D32)
                             : isCompleted
-                                ? const Color(0xFF2E7D32)
-                                : Colors.grey.shade300,
+                            ? const Color(0xFF2E7D32)
+                            : Colors.grey.shade300,
                         width: 2,
                       ),
                       boxShadow: isActive
@@ -321,8 +330,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: isCompleted
                           ? Colors.white
                           : isActive
-                              ? const Color(0xFF2E7D32)
-                              : Colors.grey.shade400,
+                          ? const Color(0xFF2E7D32)
+                          : Colors.grey.shade400,
                       size: 24,
                     ),
                   ),
@@ -391,7 +400,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           prefixIcon: Icon(icon, color: const Color(0xFF2E7D32), size: 22),
           suffixIcon: suffixIcon,
           counterText: "",
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 20,
+          ),
           border: InputBorder.none,
         ),
       ),
@@ -448,7 +460,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF2E7D32)),
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: Color(0xFF2E7D32),
+                        ),
                         onPressed: () {
                           if (_currentStep > 1) {
                             setState(() => _currentStep--);
@@ -475,7 +490,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               // Step Indicator
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: _buildStepIndicator(),
               ),
 
@@ -493,11 +511,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F8F4),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.2)),
+                            border: Border.all(
+                              color: const Color(0xFF2E7D32).withOpacity(0.2),
+                            ),
                           ),
                           child: Column(
                             children: [
-                              Icon(Icons.phone_android_rounded, size: 60, color: const Color(0xFF2E7D32)),
+                              Icon(
+                                Icons.phone_android_rounded,
+                                size: 60,
+                                color: const Color(0xFF2E7D32),
+                              ),
                               const SizedBox(height: 16),
                               const Text(
                                 "Verify Your Phone",
@@ -511,7 +535,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               Text(
                                 "Enter your registered mobile number to receive OTP",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                ),
                               ),
                             ],
                           ),
@@ -526,46 +553,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                       ],
 
-                      // Step 2: OTP
-                      if (_currentStep == 2) ...[
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F8F4),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.message_outlined, size: 60, color: const Color(0xFF2E7D32)),
-                              const SizedBox(height: 16),
-                              const Text(
-                                "Verify OTP",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1B5E20),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Enter the 6-digit OTP sent to\n${_usernameController.text}",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: _otpControllers
-                              .asMap()
-                              .entries
-                              .map((entry) => _buildOtpBox(entry.value, entry.key))
-                              .toList(),
-                        ),
-                      ],
+  // Step 2: OTP
+if (_currentStep == 2) ...[
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF1F8F4),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.2)),
+    ),
+    child: Column(
+      children: [
+        Icon(Icons.message_outlined, size: 60, color: const Color(0xFF2E7D32)),
+        const SizedBox(height: 16),
+        const Text(
+          "Verify OTP",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1B5E20),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Enter the 6-digit OTP sent to\n${_usernameController.text}",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+        ),
+      ],
+    ),
+  ),
+  const SizedBox(height: 32),
+  Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: _otpControllers
+        .asMap()
+        .entries
+        .map((entry) => _buildOtpBox(entry.value, entry.key))
+        .toList(),
+  ),
+],
 
                       // Step 3: Password
                       if (_currentStep == 3) ...[
@@ -574,11 +602,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F8F4),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.2)),
+                            border: Border.all(
+                              color: const Color(0xFF2E7D32).withOpacity(0.2),
+                            ),
                           ),
                           child: Column(
                             children: [
-                              Icon(Icons.lock_reset_rounded, size: 60, color: const Color(0xFF2E7D32)),
+                              Icon(
+                                Icons.lock_reset_rounded,
+                                size: 60,
+                                color: const Color(0xFF2E7D32),
+                              ),
                               const SizedBox(height: 16),
                               const Text(
                                 "Reset Password",
@@ -592,7 +626,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               Text(
                                 "Create a new secure password for your account",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                ),
                               ),
                             ],
                           ),
@@ -611,8 +648,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   : Icons.visibility_rounded,
                               color: const Color(0xFF2E7D32),
                             ),
-                            onPressed: () =>
-                                setState(() => _obscureNewPassword = !_obscureNewPassword),
+                            onPressed: () => setState(
+                              () => _obscureNewPassword = !_obscureNewPassword,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -631,7 +669,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               color: const Color(0xFF2E7D32),
                             ),
                             onPressed: () => setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
                             ),
                           ),
                         ),
@@ -651,10 +690,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     onPressed: _isLoading
                         ? null
                         : _currentStep == 1
-                            ? _sendOtp
-                            : _currentStep == 2
-                                ? _verifyOtp
-                                : _resetPassword,
+                        ? _sendOtp
+                        : _currentStep == 2
+                        ? _verifyOtp
+                        : _resetPassword,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
@@ -669,15 +708,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Text(
                             _currentStep == 1
                                 ? "Send OTP"
                                 : _currentStep == 2
-                                    ? "Verify OTP"
-                                    : "Reset Password",
+                                ? "Verify OTP"
+                                : "Reset Password",
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

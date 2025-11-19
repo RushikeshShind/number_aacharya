@@ -18,8 +18,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
+
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
+  bool _isGenerating = false;
 
   final List<Widget> _screens = [
     const HomeDashboard(),
@@ -28,12 +34,44 @@ class _HomeScreenState extends State<HomeScreen> {
     const CreditsScreen(),
     const ProfileScreen(),
   ];
+late AnimationController _centerButtonAnimCtrl;
+late Animation<double> _centerButtonAnim;
 
   @override
-  void initState() {
-    super.initState();
-    _checkUserSession();
-  }
+void initState() {
+  super.initState();
+  _checkUserSession();
+
+  _animCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
+
+  _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(parent: _animCtrl, curve: const Interval(0.4, 1.0)),
+  );
+
+  _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(parent: _animCtrl, curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack)),
+  );
+
+  // Auto-transition animation for center button
+  _centerButtonAnimCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 3),
+  )..repeat(); // Auto repeat
+
+  _centerButtonAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(parent: _centerButtonAnimCtrl, curve: Curves.easeInOut),
+  );
+}
+
+  @override
+void dispose() {
+  _animCtrl.dispose();
+  _centerButtonAnimCtrl.dispose();
+  super.dispose();
+}
 
   void _checkUserSession() async {
     try {
@@ -77,6 +115,11 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         return;
       }
+
+      setState(() => _isGenerating = true);
+      _animCtrl
+        ..reset()
+        ..repeat();
     }
 
     setState(() => _selectedIndex = index);
@@ -86,173 +129,204 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => screen),
       ).then((_) {
-        if (mounted) setState(() => _selectedIndex = 0);
+        if (mounted) {
+          setState(() => _selectedIndex = 0);
+          if (index == 2) {
+            _isGenerating = false;
+            _animCtrl.stop();
+            _animCtrl.reset();
+          }
+        }
       });
     }
   }
 
- // Place this INSIDE your _HomeScreenState class, replacing the old build method
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color.fromARGB(255, 0, 0, 0),
-    body: _screens[_selectedIndex],
-    extendBody: true,
-    bottomNavigationBar: Container(
-  margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10),
-  decoration: BoxDecoration(
-    color: const Color.fromARGB(255, 255, 255, 255),
-    borderRadius: BorderRadius.circular(30),
-    boxShadow: [
-      BoxShadow(
-        color: const Color(0xFF008000).withOpacity(0.5),
-        blurRadius: 15,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  ),
-  clipBehavior: Clip.none,           
-  child: Container(
-    height: 75,
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                label: "Home",
-                index: 0,
-              ),
-              _buildNavItem(
-                icon: Icons.folder_open_outlined,
-                label: "Reports",
-                index: 1,
-              ),
-              _buildCenterButton(),
-              _buildNavItem(
-                icon: Icons.local_offer_outlined,
-                label: "Credits",
-                index: 3,
-              ),
-              _buildNavItem(
-                icon: Icons.person_outline,
-                label: "Profile",
-                index: 4,
+  @override
+  Widget build(BuildContext context) {
+    // Responsive values for bottom bar
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double navHeight = screenWidth * 0.18; // ~65-70dp on most phones
+    final double horizontalMargin = screenWidth * 0.05; // 5% of screen width
+    final double centerButtonSize = screenWidth * 0.22; // ~80-90dp
+    final double centerButtonLift = screenWidth * 0.07; // ~25-28dp lift
+
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+      body: _screens[_selectedIndex],
+      extendBody: true,
+            bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom + 12, // Auto detect gesture bar
+          left: 20,
+          right: 20,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF008000).withOpacity(0.5),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-        ),
-    )
-      );
-
-  
-}
-
-// Helper method - place inside _HomeScreenState class
-Widget _buildNavItem({
-  required IconData icon,
-  required String label,
-  required int index,
-}) {
-  final isSelected = _selectedIndex == index;
-  
-  return GestureDetector(
-    onTap: () => _onItemTapped(index),
-    behavior: HitTestBehavior.opaque,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 26,
-            color: isSelected ? const Color(0xFF008000) : Colors.grey.shade600,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? const Color.fromARGB(255, 14, 13, 13) : Colors.grey.shade600,
+          child: SizedBox(
+            height: navHeight,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(icon: Icons.home_outlined, label: "Home", index: 0),
+                _buildNavItem(icon: Icons.folder_open_outlined, label: "Reports", index: 1),
+                _buildCenterButton(centerButtonSize, centerButtonLift),
+                _buildNavItem(icon: Icons.local_offer_outlined, label: "Credits", index: 3),
+                _buildNavItem(icon: Icons.person_outline, label: "Profile", index: 4),
+              ],
             ),
           ),
-          if (isSelected)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              height: 3,
-              width: 20,
-              decoration: BoxDecoration(
-                color: const Color(0xFF008000),
-                borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double iconSize = screenWidth * 0.065; // ~24-26dp
+    final double fontSize = screenWidth * 0.028; // ~10-11dp
+
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: screenWidth * 0.15, // Equal spacing
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: iconSize,
+              color: isSelected ? const Color(0xFF008000) : Colors.grey.shade600,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? const Color.fromARGB(255, 14, 13, 13) : Colors.grey.shade600,
               ),
             ),
-        ],
+            if (isSelected)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                height: 3,
+                width: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF008000),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-// Center button - place inside _HomeScreenState class
-Widget _buildCenterButton() {
+ Widget _buildCenterButton(double size, double lift) {
   final isSelected = _selectedIndex == 2;
-  
+
   return Transform.translate(
-    offset: const Offset(0, -32), // Increased offset to properly float above
+    offset: Offset(0, -lift + 8), 
     child: GestureDetector(
       onTap: () => _onItemTapped(2),
       child: Container(
-        height: 70,
-        width: 70,
+        height: size,
+        width: size,
         decoration: BoxDecoration(
+          shape: BoxShape.circle,
           gradient: LinearGradient(
             colors: isSelected
-                ? [
-                    Color(0xFF008000),
-                    const Color.fromARGB(255, 2, 172, 2),
-                  ]
-                : [
-                    Color(0xFF008000),
-                    const Color.fromARGB(255, 2, 206, 2),
-                  ],
+                ? [const Color(0xFF008000), const Color.fromARGB(255, 1, 71, 1)]
+                : [const Color(0xFF008000), const Color.fromARGB(255, 3, 194, 3)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color.fromARGB(255, 84, 225, 65).withOpacity(0.6),
-              blurRadius: 20,
-              spreadRadius: 3,
-              offset: const Offset(0, 8),
+              color: const Color.fromARGB(255, 221, 221, 221).withOpacity(0.55),
+              blurRadius: 45,
+              spreadRadius: 12,
+              offset: const Offset(0, 12),
             ),
           ],
-          border: Border.all(
-            color: Colors.white,
-            width: 4, // Thicker white border
-          ),
         ),
-        child: Center(
-          child: Image.asset(
-            'assets/images/report.png',
-            height: 36,
-            width: 36,
-            color: Colors.white,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Auto-transition animation between star and text
+            AnimatedBuilder(
+              animation: _centerButtonAnim,
+              builder: (context, _) {
+                // Show star from 0.0 to 0.4, fade out from 0.4 to 0.5
+                final starOpacity = _centerButtonAnim.value < 0.4
+                    ? 1.0
+                    : _centerButtonAnim.value < 0.5
+                        ? 1.0 - ((_centerButtonAnim.value - 0.4) / 0.1)
+                        : 0.0;
+
+                // Show text from 0.5 to 0.6, visible till 0.9, fade out 0.9 to 1.0
+                final textOpacity = _centerButtonAnim.value < 0.5
+                    ? 0.0
+                    : _centerButtonAnim.value < 0.6
+                        ? (_centerButtonAnim.value - 0.5) / 0.1
+                        : _centerButtonAnim.value < 0.9
+                            ? 1.0
+                            : 1.0 - ((_centerButtonAnim.value - 0.9) / 0.1);
+
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Star icon
+                    Opacity(
+                      opacity: starOpacity,
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: Colors.white,
+                        size: size * 0.5,
+                      ),
+                    ),
+                    // GET REPORT text
+                    Opacity(
+                      opacity: textOpacity,
+                      child: Text(
+                        "GET\nREPORT",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: size * 0.13,
+                          height: 1.1,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     ),
   );
 }
 }
-
-// END OF _HomeScreenState CLASS - Add closing brace }
-
-// ═══════════════════════════════════════════════════════════════
-// Place this OUTSIDE all classes, at the very end of the file
-// ═══════════════════════════════════════════════════════════════
 
 class _UniversePatternPainter extends CustomPainter {
   final double animationValue;
@@ -480,16 +554,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive values
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double bannerTitleSize = screenWidth * 0.040; // ~15px on 360dp
+    final double bannerSubtitleSize = screenWidth * 0.035; // ~13px
+    final double logoSize = screenWidth * 0.16; // ~60px
+    final double horizontalPadding = screenWidth * 0.04;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── HEADER ──
+                // HEADER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -544,7 +625,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                 const SizedBox(height: 28),
 
-                // ── CREDIT CARD (SOLID GREEN) ──
+                // CREDIT CARD (unchanged)
                 TweenAnimationBuilder<double>(
                   duration: const Duration(milliseconds: 1200),
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -581,7 +662,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                     },
                                   ),
                                 ),
-                                // ... (depth circles – unchanged)
                                 TweenAnimationBuilder<double>(
                                   duration: const Duration(seconds: 4),
                                   tween: Tween(begin: 0.0, end: 1.0),
@@ -592,7 +672,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                           top: -60 + (10 * circleAnim),
                                           right: -60 + (10 * circleAnim),
                                           child: Container(
-                                            width: 160, height: 160,
+                                            width: 160,
+                                            height: 160,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               gradient: RadialGradient(colors: [
@@ -602,12 +683,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                             ),
                                           ),
                                         ),
-                                        // ... other circles
                                       ],
                                     );
                                   },
                                 ),
-                                // ... content (unchanged)
                                 TweenAnimationBuilder<double>(
                                   duration: const Duration(milliseconds: 800),
                                   tween: Tween(begin: 30.0, end: 0.0),
@@ -647,7 +726,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                                               fontWeight: FontWeight.w900,
                                                               color: Colors.white,
                                                               letterSpacing: -2,
-                                                              shadows: [Shadow(color: Colors.black.withOpacity(0.15), offset: Offset(0, 2), blurRadius: 8)],
+                                                              shadows: [
+                                                                Shadow(
+                                                                    color: Colors.black.withOpacity(0.15),
+                                                                    offset: Offset(0, 2),
+                                                                    blurRadius: 8)
+                                                              ],
                                                             ),
                                                           ),
                                                         ),
@@ -660,9 +744,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                                       color: Colors.white.withOpacity(0.15),
                                                       borderRadius: BorderRadius.circular(16),
                                                       border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
-                                                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: Offset(0, 2))],
+                                                      boxShadow: [
+                                                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: Offset(0, 2))
+                                                      ],
                                                     ),
-                                                    child: Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: MediaQuery.of(context).size.width * 0.08),
+                                                    child: Icon(Icons.account_balance_wallet_rounded,
+                                                        color: Colors.white, size: MediaQuery.of(context).size.width * 0.08),
                                                   ),
                                                 ],
                                               ),
@@ -671,17 +758,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                                 width: double.infinity,
                                                 child: ElevatedButton(
                                                   onPressed: () async {
-                                                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreditsScreen()));
+                                                    await Navigator.push(context,
+                                                        MaterialPageRoute(builder: (_) => const CreditsScreen()));
                                                     _fetchCredits();
                                                   },
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor: Colors.white,
                                                     foregroundColor: const Color(0xFF008000),
-                                                    padding: EdgeInsets.symmetric(vertical: MediaQuery.of(context).size.height * 0.018),
+                                                    padding: EdgeInsets.symmetric(
+                                                        vertical: MediaQuery.of(context).size.height * 0.018),
                                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                                     elevation: 0,
                                                   ),
-                                                  child: Text("Buy Credits", style: TextStyle(fontWeight: FontWeight.w700, fontSize: MediaQuery.of(context).size.width * 0.04)),
+                                                  child: Text("Buy Credits",
+                                                      style: TextStyle(
+                                                          fontWeight: FontWeight.w700,
+                                                          fontSize: MediaQuery.of(context).size.width * 0.04)),
                                                 ),
                                               ),
                                             ],
@@ -702,16 +794,112 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                 const SizedBox(height: 32),
 
-                // ── RECENT REPORTS HEADER ──
+                // RESPONSIVE BANNER
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: screenWidth * 0.04,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF008000), Color(0xFF006400)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  "Did you know?",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: bannerTitleSize,
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.015),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.02,
+                                    vertical: screenWidth * 0.005,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(1219),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: screenWidth * 0.03,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: screenWidth * 0.01),
+                            Text(
+                              "For Your Family’s Well-Being — Get Your Number Report at 50% OFF Today!",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                fontSize: bannerSubtitleSize,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: screenWidth * 0.03),
+                    // RESPONSIVE LOGO
+Container(
+  width: logoSize,
+  height: logoSize,
+  decoration: BoxDecoration(
+    color: const Color.fromARGB(0, 255, 255, 255).withOpacity(0.2),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: const Color.fromARGB(0, 255, 255, 255).withOpacity(0.3),
+      width: 1.5,
+    ),
+  ),
+  child: Center(
+    child: Image.asset(
+      "assets/images/banner.png",
+      fit: BoxFit.contain,   // Adjusts image nicely inside
+    ),
+  ),
+),
+
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // RECENT REPORTS HEADER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Recent Reports", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF2D3748))),
+                    const Text("Recent Reports",
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF2D3748))),
                     TextButton(
                       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ListScreen())),
                       child: const Row(
                         children: [
-                          Text("View All", style: TextStyle(color: Color(0xFF008000), fontWeight: FontWeight.w600, fontSize: 15)),
+                          Text("View All",
+                              style: TextStyle(color: Color(0xFF008000), fontWeight: FontWeight.w600, fontSize: 15)),
                           SizedBox(width: 4),
                           Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF008000)),
                         ],
@@ -722,9 +910,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                 const SizedBox(height: 16),
 
-                // ── LOADING / EMPTY / LIST ──
+                // REPORTS LIST (unchanged)
                 if (_isLoading)
-                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Color(0xFF008000))))
+                  const Center(
+                      child: Padding(
+                          padding: EdgeInsets.all(40),
+                          child: CircularProgressIndicator(color: Color(0xFF008000))))
                 else if (_inquiries.isEmpty)
                   Center(
                     child: Padding(
@@ -733,7 +924,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         children: [
                           Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey[300]),
                           const SizedBox(height: 16),
-                          const Text('No recent reports available', style: TextStyle(fontSize: 16, color: Color(0xFF718096))),
+                          const Text('No recent reports available',
+                              style: TextStyle(fontSize: 16, color: Color(0xFF718096))),
                         ],
                       ),
                     ),
@@ -761,7 +953,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             borderRadius: BorderRadius.circular(24),
                             child: Column(
                               children: [
-                                // ── TOP SECTION ──
                                 Container(
                                   padding: const EdgeInsets.all(20),
                                   decoration: BoxDecoration(
@@ -775,17 +966,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        width: 70, height: 70,
+                                        width: 70,
+                                        height: 70,
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF008000),
                                           borderRadius: BorderRadius.circular(18),
-                                          boxShadow: [BoxShadow(color: const Color(0xFF008000).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                                          boxShadow: [
+                                            BoxShadow(color: const Color(0xFF008000).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))
+                                          ],
                                         ),
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Text(day, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Colors.white)),
-                                            Text('$month/$year', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
+                                            Text(day,
+                                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Colors.white)),
+                                            Text('$month/$year',
+                                                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
                                           ],
                                         ),
                                       ),
@@ -822,15 +1018,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                     ],
                                   ),
                                 ),
-
-                                // ── ACTION SECTION ──
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
                                     children: [
                                       Row(
                                         children: [
-                                          // VIEW BUTTON (GREEN)
                                           Expanded(
                                             child: Material(
                                               color: Colors.transparent,
@@ -849,7 +1042,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                                     children: [
                                                       Icon(Icons.visibility, size: 18, color: Color(0xFF008000)),
                                                       SizedBox(width: 8),
-                                                      Text("View", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF008000))),
+                                                      Text("View",
+                                                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF008000))),
                                                     ],
                                                   ),
                                                 ),
@@ -857,8 +1051,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                             ),
                                           ),
                                           const SizedBox(width: 12),
-
-                                          // PDF BUTTON (NEW RED: #C1121F)
                                           Expanded(
                                             child: Material(
                                               color: Colors.transparent,
@@ -899,8 +1091,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-
-                                      // CHECK DIFFERENT NUMBER (GREEN)
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
@@ -917,7 +1107,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                             children: [
                                               Icon(Icons.refresh_rounded, size: 18),
                                               SizedBox(width: 8),
-                                              Text("Check Different Number", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                              Text("Check Different Number",
+                                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                                             ],
                                           ),
                                         ),
